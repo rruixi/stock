@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>期货交易模拟</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e27;
+            color: #e0e0e0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* ==================== 布局结构 ==================== */
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
+        }
+
+        /* 顶部资产面板 */
+        .asset-panel {
+            background: linear-gradient(135deg, #1a1f3a 0%, #16213e 100%);
+            padding: 16px 20px;
+            border-bottom: 1px solid #2a3f5f;
+            min-height: 120px;
+            flex-shrink: 0;
+        }
+
+        .asset-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .asset-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px 16px;
+            border-radius: 8px;
+            border-left: 4px solid #1f88d9;
+            font-size: 13px;
+        }
+
+        .asset-item label {
+            display: block;
+            color: #999;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+
+        .asset-item .value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #e0e0e0;
+        }
+
+        .asset-item.profit .value {
+            color: #00ff41;
+        }
+
+        .asset-item.loss .value {
+            color: #ff3333;
+        }
+
+        /* K线图表区域 */
+        .chart-container {
+            flex: 1;
+            background: #0a0e27;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .chart-header {
+            background: #141829;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a3f5f;
+            font-size: 13px;
+        }
+
+        .chart-title {
+            font-weight: bold;
+            color: #e0e0e0;
+            font-size: 16px;
+        }
+
+        .chart-price {
+            color: #00ff41;
+            font-weight: bold;
+            font-size: 18px;
+            margin-left: 16px;
+        }
+
+        .kline-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .kline-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #2a3f5f;
+            color: #999;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .kline-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .kline-btn.active {
+            background: #1f88d9;
+            color: #fff;
+            border-color: #1f88d9;
+        }
+
+        canvas#klineChart {
+            flex: 1;
+            width: 100%;
+            display: block;
+            background: #0a0e27;
+        }
+
+        /* 主要内容区域 */
+        .main-content {
+            display: flex;
+            flex: 1;
+            gap: 0;
+            min-height: 0;
+        }
+
+        /* 交易面板 */
+        .trading-panel {
+            background: linear-gradient(135deg, #1a1f3a 0%, #16213e 100%);
+            padding: 20px;
+            border-right: 1px solid #2a3f5f;
+            width: 320px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .panel-section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* 品种选择 */
+        .commodity-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .commodity-btn {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid #2a3f5f;
+            color: #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .commodity-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #1f88d9;
+        }
+
+        .commodity-btn.active {
+            background: #1f88d9;
+            border-color: #1f88d9;
+            color: #fff;
+        }
+
+        /* 杠杆控制 */
+        .leverage-control {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .leverage-btn {
+            flex: 1;
+            min-width: 50px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid #2a3f5f;
+            color: #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .leverage-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .leverage-btn.active {
+            background: #ff6b35;
+            border-color: #ff6b35;
+            color: #fff;
+        }
+
+        /* 手数输入 */
+        .quantity-input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .qty-btn {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid #2a3f5f;
+            color: #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .qty-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .qty-btn.full {
+            background: rgba(0, 255, 65, 0.2);
+            border-color: rgba(0, 255, 65, 0.5);
+        }
+
+        .qty-btn.half {
+            background: rgba(31, 136, 217, 0.2);
+            border-color: rgba(31, 136, 217, 0.5);
+        }
+
+        .quantity-input {
+            grid-column: 1 / -1;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #2a3f5f;
+            color: #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .quantity-input::placeholder {
+            color: #555;
+        }
+
+        .quantity-input:focus {
+            outline: none;
+            border-color: #1f88d9;
+            background: rgba(31, 136, 217, 0.1);
+        }
+
+        /* 买卖按钮 */
+        .trade-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .buy-btn, .sell-btn {
+            padding: 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #fff;
+        }
+
+        .buy-btn {
+            background: linear-gradient(135deg, #00ff41 0%, #00cc33 100%);
+            box-shadow: 0 4px 15px rgba(0, 255, 65, 0.3);
+        }
+
+        .buy-btn:hover {
+            box-shadow: 0 6px 20px rgba(0, 255, 65, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .buy-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(0, 255, 65, 0.2);
+        }
+
+        .sell-btn {
+            background: linear-gradient(135deg, #ff3333 0%, #cc0000 100%);
+            box-shadow: 0 4px 15px rgba(255, 51, 51, 0.3);
+        }
+
+        .sell-btn:hover {
+            box-shadow: 0 6px 20px rgba(255, 51, 51, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .sell-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(255, 51, 51, 0.2);
+        }
+
+        /* 持仓列表 */
+        .position-list {
+            background: #141829;
+            padding: 20px;
+            width: 350px;
+            overflow-y: auto;
+            border-left: 1px solid #2a3f5f;
+            flex-shrink: 0;
+        }
+
+        .position-list-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #e0e0e0;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .position-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            border-left: 4px solid #1f88d9;
+            font-size: 13px;
+        }
+
+        .position-item.long {
+            border-left-color: #00ff41;
+        }
+
+        .position-item.short {
+            border-left-color: #ff3333;
+        }
+
+        .position-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .position-type {
+            font-weight: bold;
+            color: #e0e0e0;
+        }
+
+        .position-pl {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .position-pl.profit {
+            color: #00ff41;
+        }
+
+        .position-pl.loss {
+            color: #ff3333;
+        }
+
+        .position-detail {
+            color: #999;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .close-btn {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255, 51, 51, 0.2);
+            border: 1px solid #ff3333;
+            color: #ff3333;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 8px;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 51, 51, 0.3);
+        }
+
+        .close-btn:active {
+            transform: scale(0.95);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #555;
+            padding: 20px;
+            font-size: 13px;
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* 弹窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1f3a;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #e0e0e0;
+        }
+
+        .modal-message {
+            font-size: 15px;
+            color: #999;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .modal-btn {
+            padding: 12px 30px;
+            background: #1f88d9;
+            border: none;
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .modal-btn:hover {
+            background: #1570b8;
+        }
+
+        .modal-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 资产面板 -->
+        <div class="asset-panel">
+            <div class="asset-row">
+                <div class="asset-item">
+                    <label>账户余额</label>
+                    <div class="value" id="balance">¥100,000.00</div>
+                </div>
+                <div class="asset-item">
+                    <label>账户净值</label>
+                    <div class="value" id="equity">¥100,000.00</div>
+                </div>
+                <div class="asset-item" id="floatingPLDisplay">
+                    <label>浮动盈亏</label>
+                    <div class="value" id="floatingPL">¥0.00</div>
+                </div>
+                <div class="asset-item">
+                    <label>已用保证金 / 可用</label>
+                    <div class="value" id="margin">¥0 / ¥100,000</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主要内容区域 -->
+        <div class="main-content">
+            <!-- K线图表 -->
+            <div class="chart-container" style="flex: 1;">
+                <div class="chart-header">
+                    <div>
+                        <span class="chart-title" id="commodityName">黄金 (GOLD)</span>
+                        <span class="chart-price" id="currentPrice">1850.00</span>
+                    </div>
+                    <div class="kline-buttons">
+                        <button class="kline-btn active" data-period="1s">1s</button>
+                        <button class="kline-btn" data-period="5s">5s</button>
+                        <button class="kline-btn" data-period="15s">15s</button>
+                        <button class="kline-btn" data-period="30s">30s</button>
+                        <button class="kline-btn" data-period="1m">1m</button>
+                    </div>
+                </div>
+                <canvas id="klineChart"></canvas>
+            </div>
+
+            <!-- 交易面板 -->
+            <div class="trading-panel">
+                <div class="panel-section">
+                    <div class="section-title">交易品种</div>
+                    <div class="commodity-selector">
+                        <button class="commodity-btn active" data-commodity="gold">黄金</button>
+                        <button class="commodity-btn" data-commodity="silver">白银</button>
+                        <button class="commodity-btn" data-commodity="oil">原油</button>
+                        <button class="commodity-btn" data-commodity="soybean">豆粕</button>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <div class="section-title">杠杆倍数</div>
+                    <div class="leverage-control">
+                        <button class="leverage-btn active" data-leverage="1">1x</button>
+                        <button class="leverage-btn" data-leverage="10">10x</button>
+                        <button class="leverage-btn" data-leverage="20">20x</button>
+                        <button class="leverage-btn" data-leverage="50">50x</button>
+                        <button class="leverage-btn" data-leverage="100">100x</button>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <div class="section-title">持仓手数</div>
+                    <div class="quantity-input-group">
+                        <button class="qty-btn full" id="fullBtn">全仓</button>
+                        <button class="qty-btn half" id="halfBtn">半仓</button>
+                        <button class="qty-btn" id="clearQtyBtn">清空</button>
+                    </div>
+                    <input type="number" class="quantity-input" id="quantityInput" placeholder="输入手数" min="1" value="1">
+                </div>
+
+                <div class="trade-buttons">
+                    <button class="buy-btn" id="buyBtn">做多 ↑</button>
+                    <button class="sell-btn" id="sellBtn">做空 ↓</button>
+                </div>
+            </div>
+
+            <!-- 持仓列表 -->
+            <div class="position-list" id="positionListContainer">
+                <div class="position-list-title">持仓列表</div>
+                <div id="positionList">
+                    <div class="empty-state">暂无持仓</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗 -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-title" id="modalTitle">提示</div>
+            <div class="modal-message" id="modalMessage">消息</div>
+            <button class="modal-btn" id="modalBtn">确定</button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 全局配置 ====================
+        const CONFIG = {
+            initialBalance: 100000,
+            marginRatio: 0.05,
+            liquidationThreshold: 0.2,
+            commodities: {
+                gold: { name: '黄金', symbol: 'GOLD', initialPrice: 1850, volatility: 0.003, trend: 0.0002 },
+                silver: { name: '白银', symbol: 'SILVER', initialPrice: 22.5, volatility: 0.01, trend: 0.0005 },
+                oil: { name: '原油', symbol: 'OIL', initialPrice: 75, volatility: 0.012, trend: 0.0003 },
+                soybean: { name: '豆粕', symbol: 'SOYBEAN', initialPrice: 3800, volatility: 0.008, trend: 0.0001 }
+            },
+            tickSize: 0.25
+        };
+
+        // ==================== 游戏状态 ====================
+        const gameState = {
+            balance: CONFIG.initialBalance,
+            positions: [],
+            currentCommodity: 'gold',
+            currentLeverage: 1,
+            currentQuantity: 1,
+            prices: {},
+            klineData: {},
+            marketData: {}
+        };
+
+        // 初始化价格数据
+        Object.keys(CONFIG.commodities).forEach(key => {
+            gameState.prices[key] = [CONFIG.commodities[key].initialPrice];
+            gameState.klineData[key] = {
+                '1s': [],
+                '5s': [],
+                '15s': [],
+                '30s': [],
+                '1m': []
+            };
+            gameState.marketData[key] = {
+                currentPrice: CONFIG.commodities[key].initialPrice,
+                trend: 0,
+                lastUpdateTime: Date.now()
+            };
+        });
+
+        // ==================== 价格生成引擎 ====================
+        function generateNextPrice(commodity) {
+            const config = CONFIG.commodities[commodity];
+            const currentPrice = gameState.marketData[commodity].currentPrice;
+            
+            const priceHistory = gameState.prices[commodity];
+            let trend = config.trend;
+            if (priceHistory.length > 20) {
+                const recentPrices = priceHistory.slice(-20);
+                const avgPrice = recentPrices.reduce((a, b) => a + b) / recentPrices.length;
+                trend = (recentPrices[recentPrices.length - 1] - recentPrices[0]) / (20 * avgPrice) * 0.1;
+            }
+
+            const u1 = Math.random();
+            const u2 = Math.random();
+            const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+            
+            const dt = CONFIG.tickSize;
+            const driftTerm = trend * currentPrice * dt;
+            const volatilityTerm = config.volatility * currentPrice * z * Math.sqrt(dt);
+            const newPrice = currentPrice + driftTerm + volatilityTerm;
+
+            return Math.max(newPrice, currentPrice * 0.5);
+        }
+
+        function updatePrices() {
+            const now = Date.now();
+
+            Object.keys(CONFIG.commodities).forEach(commodity => {
+                const newPrice = generateNextPrice(commodity);
+                gameState.marketData[commodity].currentPrice = newPrice;
+                gameState.prices[commodity].push(newPrice);
+                updateKlineData(commodity, newPrice, now);
+            });
+
+            if (gameState.currentCommodity) {
+                updateUI();
+            }
+        }
+
+        function updateKlineData(commodity, price, timestamp) {
+            const klineTypes = ['1s', '5s', '15s', '30s', '1m'];
+            const intervals = {
+                '1s': 1000,
+                '5s': 5000,
+                '15s': 15000,
+                '30s': 30000,
+                '1m': 60000
+            };
+
+            klineTypes.forEach(period => {
+                const klines = gameState.klineData[commodity][period];
+                const interval = intervals[period];
+
+                if (klines.length === 0) {
+                    klines.push({
+                        time: timestamp,
+                        open: price,
+                        close: price,
+                        high: price,
+                        low: price,
+                        volume: 1
+                    });
+                } else {
+                    const lastKline = klines[klines.length - 1];
+                    
+                    if (timestamp - lastKline.time >= interval) {
+                        klines.push({
+                            time: timestamp,
+                            open: price,
+                            close: price,
+                            high: price,
+                            low: price,
+                            volume: 1
+                        });
+                    } else {
+                        lastKline.close = price;
+                        lastKline.high = Math.max(lastKline.high, price);
+                        lastKline.low = Math.min(lastKline.low, price);
+                        lastKline.volume++;
+                    }
+                }
+
+                if (klines.length > 200) {
+                    klines.shift();
+                }
+            });
+        }
+
+        // ==================== 交易逻辑 ====================
+        function calculateMarginRequired(commodity, quantity) {
+            const price = gameState.marketData[commodity].currentPrice;
+            const contractValue = price * quantity * 100;
+            return contractValue * CONFIG.marginRatio;
+        }
+
+        function calculateMarginRate() {
+            let usedMargin = 0;
+            gameState.positions.forEach(pos => {
+                usedMargin += calculateMarginRequired(pos.commodity, pos.quantity);
+            });
+
+            const availableBalance = gameState.balance;
+            if (usedMargin === 0) return Infinity;
+            return availableBalance / usedMargin;
+        }
+
+        function openPosition(type) {
+            const commodity = gameState.currentCommodity;
+            const quantity = parseInt(gameState.currentQuantity);
+            const leverage = gameState.currentLeverage;
+
+            if (quantity <= 0) {
+                showModal('错误', '请输入有效的手数');
+                return;
+            }
+
+            const marginRequired = calculateMarginRequired(commodity, quantity) / leverage;
+
+            if (marginRequired > gameState.balance) {
+                showModal('错误', `保证金不足。需要 ¥${marginRequired.toFixed(2)}，可用 ¥${gameState.balance.toFixed(2)}`);
+                return;
+            }
+
+            gameState.balance -= marginRequired;
+
+            const position = {
+                id: Date.now(),
+                commodity,
+                type,
+                quantity,
+                leverage,
+                entryPrice: gameState.marketData[commodity].currentPrice,
+                margin: marginRequired,
+                openTime: new Date().toLocaleTimeString()
+            };
+
+            gameState.positions.push(position);
+            showModal('成功', `${type === 'long' ? '做多' : '做空'} ${quantity}手 ${CONFIG.commodities[commodity].name}`);
+            updateUI();
+        }
+
+        function closePosition(positionId) {
+            const positionIndex = gameState.positions.findIndex(p => p.id === positionId);
+            if (positionIndex === -1) return;
+
+            const position = gameState.positions[positionIndex];
+            const currentPrice = gameState.marketData[position.commodity].currentPrice;
+            
+            let profitLoss;
+            if (position.type === 'long') {
+                profitLoss = (currentPrice - position.entryPrice) * position.quantity * 100 * position.leverage;
+            } else {
+                profitLoss = (position.entryPrice - currentPrice) * position.quantity * 100 * position.leverage;
+            }
+
+            gameState.balance += position.margin + profitLoss;
+            gameState.positions.splice(positionIndex, 1);
+            showModal('平仓', `盈亏：¥${profitLoss.toFixed(2)}`);
+            updateUI();
+        }
+
+        function checkLiquidation() {
+            const marginRate = calculateMarginRate();
+            
+            if (marginRate < CONFIG.liquidationThreshold) {
+                let totalLoss = 0;
+                gameState.positions.forEach(position => {
+                    const currentPrice = gameState.marketData[position.commodity].currentPrice;
+                    let profitLoss;
+                    if (position.type === 'long') {
+                        profitLoss = (currentPrice - position.entryPrice) * position.quantity * 100 * position.leverage;
+                    } else {
+                        profitLoss = (position.entryPrice - currentPrice) * position.quantity * 100 * position.leverage;
+                    }
+                    totalLoss += profitLoss;
+                    gameState.balance += position.margin;
+                });
+
+                gameState.positions = [];
+                showModal('爆仓', `保证金不足，已强制平仓！\n总损失：¥${totalLoss.toFixed(2)}\n剩余资金：¥${gameState.balance.toFixed(2)}`);
+                updateUI();
+            }
+        }
+
+        // ==================== UI 更新 ====================
+        function updateUI() {
+            const floatingPL = calculateFloatingPL();
+            const equity = gameState.balance + floatingPL;
+            let usedMargin = 0;
+
+            gameState.positions.forEach(pos => {
+                usedMargin += calculateMarginRequired(pos.commodity, pos.quantity);
+            });
+
+            document.getElementById('balance').textContent = `¥${gameState.balance.toFixed(2)}`;
+            document.getElementById('equity').textContent = `¥${equity.toFixed(2)}`;
+            
+            const floatingPLDisplay = document.getElementById('floatingPLDisplay');
+            const floatingPLElement = document.getElementById('floatingPL');
+            floatingPLElement.textContent = `¥${floatingPL.toFixed(2)}`;
+            
+            if (floatingPL >= 0) {
+                floatingPLDisplay.classList.add('profit');
+                floatingPLDisplay.classList.remove('loss');
+            } else {
+                floatingPLDisplay.classList.add('loss');
+                floatingPLDisplay.classList.remove('profit');
+            }
+
+            document.getElementById('margin').textContent = 
+                `¥${usedMargin.toFixed(0)} / ¥${gameState.balance.toFixed(0)}`;
+
+            const price = gameState.marketData[gameState.currentCommodity].currentPrice;
+            document.getElementById('currentPrice').textContent = price.toFixed(2);
+
+            updatePositionList();
+            drawKlineChart();
+        }
+
+        function calculateFloatingPL() {
+            let totalPL = 0;
+            gameState.positions.forEach(position => {
+                const currentPrice = gameState.marketData[position.commodity].currentPrice;
+                let pl;
+                if (position.type === 'long') {
+                    pl = (currentPrice - position.entryPrice) * position.quantity * 100 * position.leverage;
+                } else {
+                    pl = (position.entryPrice - currentPrice) * position.quantity * 100 * position.leverage;
+                }
+                totalPL += pl;
+            });
+            return totalPL;
+        }
+
+        function updatePositionList() {
+            const list = document.getElementById('positionList');
+            
+            if (gameState.positions.length === 0) {
+                list.innerHTML = '<div class="empty-state">暂无持仓</div>';
+                return;
+            }
+
+            let html = '';
+            gameState.positions.forEach(pos => {
+                const currentPrice = gameState.marketData[pos.commodity].currentPrice;
+                let profitLoss;
+                if (pos.type === 'long') {
+                    profitLoss = (currentPrice - pos.entryPrice) * pos.quantity * 100 * pos.leverage;
+                } else {
+                    profitLoss = (pos.entryPrice - currentPrice) * pos.quantity * 100 * pos.leverage;
+                }
+
+                const typeName = pos.type === 'long' ? '多头' : '空头';
+                const typeClass = pos.type === 'long' ? 'long' : 'short';
+                const plClass = profitLoss >= 0 ? 'profit' : 'loss';
+                const plSymbol = profitLoss >= 0 ? '+' : '';
+
+                html += `
+                    <div class="position-item ${typeClass}">
+                        <div class="position-header">
+                            <span class="position-type">${typeName} ${pos.quantity}手</span>
+                            <span class="position-pl ${plClass}">${plSymbol}¥${profitLoss.toFixed(2)}</span>
+                        </div>
+                        <div class="position-detail">品种: ${CONFIG.commodities[pos.commodity].name}</div>
+                        <div class="position-detail">入场: ¥${pos.entryPrice.toFixed(2)} | 杠杆: ${pos.leverage}x</div>
+                        <div class="position-detail">时间: ${pos.openTime}</div>
+                        <button class="close-btn" onclick="game.closePosition(${pos.id})">平仓</button>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = html;
+        }
+
+        let currentKlinePeriod = '1s';
+
+        function drawKlineChart() {
+            const canvas = document.getElementById('klineChart');
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+
+            const commodity = gameState.currentCommodity;
+            const klines = gameState.klineData[commodity][currentKlinePeriod];
+
+            if (klines.length === 0) {
+                ctx.fillStyle = '#555';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('暂无K线数据', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            const displayCount = Math.min(50, klines.length);
+            const startIndex = Math.max(0, klines.length - displayCount);
+            const displayKlines = klines.slice(startIndex);
+
+            let maxPrice = displayKlines[0].high;
+            let minPrice = displayKlines[0].low;
+            displayKlines.forEach(k => {
+                maxPrice = Math.max(maxPrice, k.high);
+                minPrice = Math.min(minPrice, k.low);
+            });
+
+            const padding = 50;
+            const chartWidth = canvas.width - padding * 2;
+            const chartHeight = canvas.height - padding * 2;
+            const priceRange = maxPrice - minPrice || 1;
+
+            function priceToY(price) {
+                return canvas.height - padding - ((price - minPrice) / priceRange) * chartHeight;
+            }
+
+            function indexToX(index) {
+                const klineWidth = chartWidth / displayCount;
+                return padding + (index + 0.5) * klineWidth;
+            }
+
+            ctx.fillStyle = '#0a0e27';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = padding + (i / 4) * chartHeight;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(canvas.width - padding, y);
+                ctx.stroke();
+
+                const price = minPrice + ((4 - i) / 4) * priceRange;
+                ctx.fillStyle = '#666';
+                ctx.font = '11px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(price.toFixed(2), padding - 10, y + 4);
+            }
+
+            const ma5 = calculateMA(displayKlines, 5);
+            const ma10 = calculateMA(displayKlines, 10);
+
+            ctx.strokeStyle = '#ff9800';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < ma5.length; i++) {
+                const x = indexToX(i);
+                const y = priceToY(ma5[i]);
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+
+            ctx.strokeStyle = '#2196f3';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < ma10.length; i++) {
+                const x = indexToX(i);
+                const y = priceToY(ma10[i]);
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+
+            const klineWidth = chartWidth / displayCount * 0.8;
+            displayKlines.forEach((k, i) => {
+                const x = indexToX(i);
+                const openY = priceToY(k.open);
+                const closeY = priceToY(k.close);
+                const highY = priceToY(k.high);
+                const lowY = priceToY(k.low);
+
+                const isUp = k.close >= k.open;
+                ctx.fillStyle = isUp ? '#00ff41' : '#ff3333';
+                ctx.strokeStyle = isUp ? '#00ff41' : '#ff3333';
+
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(x, highY);
+                ctx.lineTo(x, lowY);
+                ctx.stroke();
+
+                const top = Math.min(openY, closeY);
+                const height = Math.abs(closeY - openY);
+                ctx.fillRect(x - klineWidth / 2, top, klineWidth, Math.max(height, 1));
+            });
+
+            ctx.fillStyle = '#666';
+            ctx.font = '11px Arial';
+            ctx.textAlign = 'center';
+            for (let i = 0; i < displayKlines.length; i += Math.ceil(displayKlines.length / 5)) {
+                const x = indexToX(i);
+                const time = new Date(displayKlines[i].time);
+                ctx.fillText(time.getHours() + ':' + String(time.getMinutes()).padStart(2, '0'), x, canvas.height - 15);
+            }
+
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#ff9800';
+            ctx.fillText('MA5', padding, 20);
+            ctx.fillStyle = '#2196f3';
+            ctx.fillText('MA10', padding + 60, 20);
+        }
+
+        function calculateMA(klines, period) {
+            const result = [];
+            for (let i = 0; i < klines.length; i++) {
+                const start = Math.max(0, i - period + 1);
+                const values = klines.slice(start, i + 1).map(k => (k.open + k.close + k.high + k.low) / 4);
+                const avg = values.reduce((a, b) => a + b) / values.length;
+                result.push(avg);
+            }
+            return result;
+        }
+
+        // ==================== 事件处理 ====================
+        function setupEventListeners() {
+            document.querySelectorAll('.commodity-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.commodity-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    gameState.currentCommodity = this.dataset.commodity;
+                    const commodityConfig = CONFIG.commodities[gameState.currentCommodity];
+                    document.getElementById('commodityName').textContent = 
+                        `${commodityConfig.name} (${commodityConfig.symbol})`;
+                    updateUI();
+                });
+            });
+
+            document.querySelectorAll('.kline-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.kline-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentKlinePeriod = this.dataset.period;
+                    updateUI();
+                });
+            });
+
+            document.querySelectorAll('.leverage-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.leverage-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    gameState.currentLeverage = parseInt(this.dataset.leverage);
+                });
+            });
+
+            document.getElementById('fullBtn').addEventListener('click', () => {
+                const commodity = gameState.currentCommodity;
+                const marginPerUnit = calculateMarginRequired(commodity, 1) / gameState.currentLeverage;
+                const maxQuantity = Math.floor(gameState.balance / marginPerUnit);
+                gameState.currentQuantity = Math.max(1, maxQuantity);
+                document.getElementById('quantityInput').value = gameState.currentQuantity;
+            });
+
+            document.getElementById('halfBtn').addEventListener('click', () => {
+                const commodity = gameState.currentCommodity;
+                const marginPerUnit = calculateMarginRequired(commodity, 1) / gameState.currentLeverage;
+                const maxQuantity = Math.floor(gameState.balance / marginPerUnit / 2);
+                gameState.currentQuantity = Math.max(1, maxQuantity);
+                document.getElementById('quantityInput').value = gameState.currentQuantity;
+            });
+
+            document.getElementById('clearQtyBtn').addEventListener('click', () => {
+                gameState.currentQuantity = 1;
+                document.getElementById('quantityInput').value = 1;
+            });
+
+            document.getElementById('quantityInput').addEventListener('change', function() {
+                gameState.currentQuantity = parseInt(this.value) || 1;
+            });
+
+            document.getElementById('buyBtn').addEventListener('click', () => {
+                openPosition('long');
+            });
+
+            document.getElementById('sellBtn').addEventListener('click', () => {
+                openPosition('short');
+            });
+
+            document.getElementById('modalBtn').addEventListener('click', () => {
+                document.getElementById('modal').classList.remove('show');
+            });
+        }
+
+        function showModal(title, message) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modal').classList.add('show');
+        }
+
+        const game = {
+            closePosition: closePosition
+        };
+
+        function init() {
+            setupEventListeners();
+            updateUI();
+
+            setInterval(() => {
+                updatePrices();
+                checkLiquidation();
+            }, CONFIG.tickSize * 1000);
+
+            setInterval(checkLiquidation, 1000);
+
+            console.log('游戏已初始化');
+            console.log('初始资金:', CONFIG.initialBalance);
+            console.log('保证金比例:', CONFIG.marginRatio * 100 + '%');
+            console.log('爆仓阈值:', CONFIG.liquidationThreshold * 100 + '%');
+        }
+
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
