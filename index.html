@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>期货交易模拟</title>
+    <title>期货交易模拟游戏</title>
+    <script src="https://cdn.jsdelivr.net/npm/bignumber.js@9.1.2/bignumber.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -62,6 +63,7 @@
             font-size: 18px;
             font-weight: bold;
             color: #e0e0e0;
+            word-break: break-all;
         }
 
         .asset-item.profit .value {
@@ -103,6 +105,7 @@
             font-weight: bold;
             font-size: 18px;
             margin-left: 16px;
+            word-break: break-all;
         }
 
         .kline-buttons {
@@ -133,11 +136,61 @@
             border-color: #1f88d9;
         }
 
+        .chart-controls {
+            background: #141829;
+            padding: 8px 20px;
+            border-bottom: 1px solid #2a3f5f;
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            flex-wrap: wrap;
+        }
+
+        .chart-control-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chart-control-item label {
+            color: #999;
+        }
+
+        .chart-control-item input[type="checkbox"] {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        .chart-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+        }
+
         canvas#klineChart {
             flex: 1;
             width: 100%;
             display: block;
             background: #0a0e27;
+        }
+
+        canvas#volumeChart {
+            width: 100%;
+            height: 80px;
+            display: block;
+            background: #0a0e27;
+            border-top: 1px solid #2a3f5f;
+        }
+
+        canvas#macdChart {
+            width: 100%;
+            height: 80px;
+            display: block;
+            background: #0a0e27;
+            border-top: 1px solid #2a3f5f;
         }
 
         /* 主要内容区域 */
@@ -389,6 +442,7 @@
         .position-pl {
             font-weight: bold;
             font-size: 14px;
+            word-break: break-all;
         }
 
         .position-pl.profit {
@@ -403,6 +457,7 @@
             color: #999;
             font-size: 12px;
             margin-bottom: 4px;
+            word-break: break-all;
         }
 
         .close-btn {
@@ -474,7 +529,9 @@
             background: #1a1f3a;
             padding: 30px;
             border-radius: 12px;
-            max-width: 400px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
             text-align: center;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         }
@@ -491,6 +548,7 @@
             color: #999;
             margin-bottom: 20px;
             line-height: 1.6;
+            word-break: break-all;
         }
 
         .modal-btn {
@@ -511,6 +569,29 @@
 
         .modal-btn:active {
             transform: scale(0.95);
+        }
+
+        /* 图例 */
+        .chart-legend {
+            background: #141829;
+            padding: 8px 20px;
+            border-bottom: 1px solid #2a3f5f;
+            display: flex;
+            gap: 20px;
+            font-size: 11px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
         }
     </style>
 </head>
@@ -555,7 +636,61 @@
                         <button class="kline-btn" data-period="1m">1m</button>
                     </div>
                 </div>
-                <canvas id="klineChart"></canvas>
+
+                <!-- 图表控制 -->
+                <div class="chart-controls">
+                    <div class="chart-control-item">
+                        <input type="checkbox" id="showMA" checked>
+                        <label for="showMA">均线</label>
+                    </div>
+                    <div class="chart-control-item">
+                        <input type="checkbox" id="showBoll" checked>
+                        <label for="showBoll">布林线</label>
+                    </div>
+                    <div class="chart-control-item">
+                        <input type="checkbox" id="showVolume" checked>
+                        <label for="showVolume">成交量</label>
+                    </div>
+                    <div class="chart-control-item">
+                        <input type="checkbox" id="showMACD" checked>
+                        <label for="showMACD">MACD</label>
+                    </div>
+                </div>
+
+                <!-- 图例 -->
+                <div class="chart-legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff9800;"></div>
+                        <span>MA5</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #2196f3;"></div>
+                        <span>MA10</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4caf50;"></div>
+                        <span>MA20</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(255, 255, 255, 0.2);"></div>
+                        <span>布林线</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #00ff41;"></div>
+                        <span>MACD</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff3333;"></div>
+                        <span>Signal</span>
+                    </div>
+                </div>
+
+                <!-- 图表区域 -->
+                <div class="chart-wrapper">
+                    <canvas id="klineChart"></canvas>
+                    <canvas id="volumeChart"></canvas>
+                    <canvas id="macdChart"></canvas>
+                </div>
             </div>
 
             <!-- 交易面板 -->
@@ -617,35 +752,130 @@
     </div>
 
     <script>
+        // ==================== BigNumber 配置 ====================
+        BigNumber.config({
+            DECIMAL_PLACES: 150,
+            ROUNDING_MODE: BigNumber.ROUND_DOWN,
+            EXPONENTIAL_AT: [-150, 150],
+            FORMAT: {
+                decimalSeparator: '.',
+                groupSeparator: ',',
+                groupSize: 3
+            }
+        });
+
+        // ==================== 高精度数学工具 ====================
+        const BigMath = {
+            // 创建BigNumber
+            create: (value) => new BigNumber(value),
+            
+            // 加法
+            add: (a, b) => new BigNumber(a).plus(new BigNumber(b)),
+            
+            // 减法
+            subtract: (a, b) => new BigNumber(a).minus(new BigNumber(b)),
+            
+            // 乘法
+            multiply: (a, b) => new BigNumber(a).times(new BigNumber(b)),
+            
+            // 除法
+            divide: (a, b) => new BigNumber(a).dividedBy(new BigNumber(b)),
+            
+            // 平方根
+            sqrt: (a) => new BigNumber(a).sqrt(),
+            
+            // 幂运算
+            pow: (a, b) => new BigNumber(a).pow(new BigNumber(b)),
+            
+            // 绝对值
+            abs: (a) => new BigNumber(a).abs(),
+            
+            // 比较
+            isGreaterThan: (a, b) => new BigNumber(a).isGreaterThan(new BigNumber(b)),
+            isLessThan: (a, b) => new BigNumber(a).isLessThan(new BigNumber(b)),
+            isEqualTo: (a, b) => new BigNumber(a).isEqualTo(new BigNumber(b)),
+            
+            // 最大值
+            max: (...values) => BigNumber.max(...values.map(v => new BigNumber(v))),
+            
+            // 最小值
+            min: (...values) => BigNumber.min(...values.map(v => new BigNumber(v))),
+            
+            // 转换为字符串（不使用科学计数法）
+            toString: (value, decimals = 150) => {
+                const bn = new BigNumber(value);
+                return bn.toFixed(decimals, BigNumber.ROUND_DOWN);
+            },
+            
+            // 转换为显示格式（保留指定小数位）
+            toDisplay: (value, decimals = 2) => {
+                const bn = new BigNumber(value);
+                return bn.toFixed(decimals, BigNumber.ROUND_DOWN);
+            },
+            
+            // 转换为数字（用于绘图）
+            toNumber: (value) => new BigNumber(value).toNumber()
+        };
+
         // ==================== 全局配置 ====================
         const CONFIG = {
-            initialBalance: 100000,
-            marginRatio: 0.05,
-            liquidationThreshold: 0.2,
+            initialBalance: BigMath.create('100000'),
+            marginRatio: BigMath.create('0.05'),
+            liquidationThreshold: BigMath.create('0.2'),
             commodities: {
-                gold: { name: '黄金', symbol: 'GOLD', initialPrice: 1850, volatility: 0.003, trend: 0.0002 },
-                silver: { name: '白银', symbol: 'SILVER', initialPrice: 22.5, volatility: 0.01, trend: 0.0005 },
-                oil: { name: '原油', symbol: 'OIL', initialPrice: 75, volatility: 0.012, trend: 0.0003 },
-                soybean: { name: '豆粕', symbol: 'SOYBEAN', initialPrice: 3800, volatility: 0.008, trend: 0.0001 }
+                gold: { 
+                    name: '黄金', 
+                    symbol: 'GOLD', 
+                    initialPrice: BigMath.create('1850'), 
+                    volatility: BigMath.create('0.003'), 
+                    trend: BigMath.create('0.0002') 
+                },
+                silver: { 
+                    name: '白银', 
+                    symbol: 'SILVER', 
+                    initialPrice: BigMath.create('22.5'), 
+                    volatility: BigMath.create('0.01'), 
+                    trend: BigMath.create('0.0005') 
+                },
+                oil: { 
+                    name: '原油', 
+                    symbol: 'OIL', 
+                    initialPrice: BigMath.create('75'), 
+                    volatility: BigMath.create('0.012'), 
+                    trend: BigMath.create('0.0003') 
+                },
+                soybean: { 
+                    name: '豆粕', 
+                    symbol: 'SOYBEAN', 
+                    initialPrice: BigMath.create('3800'), 
+                    volatility: BigMath.create('0.008'), 
+                    trend: BigMath.create('0.0001') 
+                }
             },
-            tickSize: 0.25
+            tickSize: BigMath.create('0.25')
         };
 
         // ==================== 游戏状态 ====================
         const gameState = {
-            balance: CONFIG.initialBalance,
+            balance: BigMath.create(CONFIG.initialBalance),
             positions: [],
             currentCommodity: 'gold',
             currentLeverage: 1,
             currentQuantity: 1,
             prices: {},
             klineData: {},
-            marketData: {}
+            marketData: {},
+            chartSettings: {
+                showMA: true,
+                showBoll: true,
+                showVolume: true,
+                showMACD: true
+            }
         };
 
         // 初始化价格数据
         Object.keys(CONFIG.commodities).forEach(key => {
-            gameState.prices[key] = [CONFIG.commodities[key].initialPrice];
+            gameState.prices[key] = [BigMath.create(CONFIG.commodities[key].initialPrice)];
             gameState.klineData[key] = {
                 '1s': [],
                 '5s': [],
@@ -654,11 +884,38 @@
                 '1m': []
             };
             gameState.marketData[key] = {
-                currentPrice: CONFIG.commodities[key].initialPrice,
-                trend: 0,
+                currentPrice: BigMath.create(CONFIG.commodities[key].initialPrice),
+                trend: BigMath.create('0'),
                 lastUpdateTime: Date.now()
             };
         });
+
+        // ==================== 高精度随机数生成 ====================
+        function randomBigNumber() {
+            // 生成0-1之间的高精度随机数
+            let randomStr = '0.';
+            for (let i = 0; i < 150; i++) {
+                randomStr += Math.floor(Math.random() * 10);
+            }
+            return BigMath.create(randomStr);
+        }
+
+        // Box-Muller变换生成正态分布随机数
+        function normalRandom() {
+            const u1 = randomBigNumber();
+            const u2 = randomBigNumber();
+            
+            // z = sqrt(-2 * ln(u1)) * cos(2 * PI * u2)
+            const minusTwo = BigMath.create('-2');
+            const ln_u1 = BigMath.create(Math.log(BigMath.toNumber(u1)));
+            const sqrt_part = BigMath.sqrt(BigMath.multiply(minusTwo, ln_u1));
+            
+            const twoPi = BigMath.create(2 * Math.PI);
+            const angle = BigMath.multiply(twoPi, u2);
+            const cos_part = BigMath.create(Math.cos(BigMath.toNumber(angle)));
+            
+            return BigMath.multiply(sqrt_part, cos_part);
+        }
 
         // ==================== 价格生成引擎 ====================
         function generateNextPrice(commodity) {
@@ -667,22 +924,47 @@
             
             const priceHistory = gameState.prices[commodity];
             let trend = config.trend;
+            
             if (priceHistory.length > 20) {
                 const recentPrices = priceHistory.slice(-20);
-                const avgPrice = recentPrices.reduce((a, b) => a + b) / recentPrices.length;
-                trend = (recentPrices[recentPrices.length - 1] - recentPrices[0]) / (20 * avgPrice) * 0.1;
+                let sum = BigMath.create('0');
+                recentPrices.forEach(p => {
+                    sum = BigMath.add(sum, p);
+                });
+                const avgPrice = BigMath.divide(sum, BigMath.create('20'));
+                
+                const firstPrice = recentPrices[0];
+                const lastPrice = recentPrices[recentPrices.length - 1];
+                const priceDiff = BigMath.subtract(lastPrice, firstPrice);
+                const denominator = BigMath.multiply(BigMath.create('20'), avgPrice);
+                const trendCalc = BigMath.divide(priceDiff, denominator);
+                trend = BigMath.multiply(trendCalc, BigMath.create('0.1'));
             }
 
-            const u1 = Math.random();
-            const u2 = Math.random();
-            const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+            const z = normalRandom();
             
             const dt = CONFIG.tickSize;
-            const driftTerm = trend * currentPrice * dt;
-            const volatilityTerm = config.volatility * currentPrice * z * Math.sqrt(dt);
-            const newPrice = currentPrice + driftTerm + volatilityTerm;
+            const driftTerm = BigMath.multiply(
+                BigMath.multiply(trend, currentPrice),
+                dt
+            );
+            
+            const sqrtDt = BigMath.sqrt(dt);
+            const volatilityTerm = BigMath.multiply(
+                BigMath.multiply(
+                    BigMath.multiply(config.volatility, currentPrice),
+                    z
+                ),
+                sqrtDt
+            );
+            
+            const newPrice = BigMath.add(
+                BigMath.add(currentPrice, driftTerm),
+                volatilityTerm
+            );
 
-            return Math.max(newPrice, currentPrice * 0.5);
+            const minPrice = BigMath.multiply(currentPrice, BigMath.create('0.5'));
+            return BigMath.isGreaterThan(newPrice, minPrice) ? newPrice : minPrice;
         }
 
         function updatePrices() {
@@ -692,6 +974,12 @@
                 const newPrice = generateNextPrice(commodity);
                 gameState.marketData[commodity].currentPrice = newPrice;
                 gameState.prices[commodity].push(newPrice);
+                
+                // 保留最近1000个价格点
+                if (gameState.prices[commodity].length > 1000) {
+                    gameState.prices[commodity].shift();
+                }
+                
                 updateKlineData(commodity, newPrice, now);
             });
 
@@ -717,10 +1005,10 @@
                 if (klines.length === 0) {
                     klines.push({
                         time: timestamp,
-                        open: price,
-                        close: price,
-                        high: price,
-                        low: price,
+                        open: BigMath.create(price),
+                        close: BigMath.create(price),
+                        high: BigMath.create(price),
+                        low: BigMath.create(price),
                         volume: 1
                     });
                 } else {
@@ -729,16 +1017,16 @@
                     if (timestamp - lastKline.time >= interval) {
                         klines.push({
                             time: timestamp,
-                            open: price,
-                            close: price,
-                            high: price,
-                            low: price,
+                            open: BigMath.create(price),
+                            close: BigMath.create(price),
+                            high: BigMath.create(price),
+                            low: BigMath.create(price),
                             volume: 1
                         });
                     } else {
-                        lastKline.close = price;
-                        lastKline.high = Math.max(lastKline.high, price);
-                        lastKline.low = Math.min(lastKline.low, price);
+                        lastKline.close = BigMath.create(price);
+                        lastKline.high = BigMath.max(lastKline.high, price);
+                        lastKline.low = BigMath.min(lastKline.low, price);
                         lastKline.volume++;
                     }
                 }
@@ -749,22 +1037,167 @@
             });
         }
 
+        // ==================== 技术指标计算 ====================
+        function calculateMA(klines, period) {
+            const result = [];
+            for (let i = 0; i < klines.length; i++) {
+                const start = Math.max(0, i - period + 1);
+                const slice = klines.slice(start, i + 1);
+                
+                let sum = BigMath.create('0');
+                slice.forEach(k => {
+                    const avg = BigMath.divide(
+                        BigMath.add(
+                            BigMath.add(
+                                BigMath.add(k.open, k.close),
+                                k.high
+                            ),
+                            k.low
+                        ),
+                        BigMath.create('4')
+                    );
+                    sum = BigMath.add(sum, avg);
+                });
+                
+                const ma = BigMath.divide(sum, BigMath.create(slice.length.toString()));
+                result.push(ma);
+            }
+            return result;
+        }
+
+        function calculateBollinger(klines, period = 20, stdDev = 2) {
+            const result = {
+                middle: [],
+                upper: [],
+                lower: []
+            };
+
+            for (let i = 0; i < klines.length; i++) {
+                const start = Math.max(0, i - period + 1);
+                const slice = klines.slice(start, i + 1);
+                
+                const values = [];
+                let sum = BigMath.create('0');
+                
+                slice.forEach(k => {
+                    const avg = BigMath.divide(
+                        BigMath.add(
+                            BigMath.add(
+                                BigMath.add(k.open, k.close),
+                                k.high
+                            ),
+                            k.low
+                        ),
+                        BigMath.create('4')
+                    );
+                    values.push(avg);
+                    sum = BigMath.add(sum, avg);
+                });
+                
+                const mean = BigMath.divide(sum, BigMath.create(values.length.toString()));
+                
+                let varianceSum = BigMath.create('0');
+                values.forEach(val => {
+                    const diff = BigMath.subtract(val, mean);
+                    varianceSum = BigMath.add(varianceSum, BigMath.multiply(diff, diff));
+                });
+                
+                const variance = BigMath.divide(varianceSum, BigMath.create(values.length.toString()));
+                const std = BigMath.sqrt(variance);
+                
+                const stdDevBig = BigMath.create(stdDev.toString());
+                const upperBand = BigMath.add(mean, BigMath.multiply(stdDevBig, std));
+                const lowerBand = BigMath.subtract(mean, BigMath.multiply(stdDevBig, std));
+
+                result.middle.push(mean);
+                result.upper.push(upperBand);
+                result.lower.push(lowerBand);
+            }
+
+            return result;
+        }
+
+        function calculateMACD(klines) {
+            const prices = klines.map(k => 
+                BigMath.divide(
+                    BigMath.add(
+                        BigMath.add(
+                            BigMath.add(k.open, k.close),
+                            k.high
+                        ),
+                        k.low
+                    ),
+                    BigMath.create('4')
+                )
+            );
+            
+            const ema12 = calculateEMA(prices, 12);
+            const ema26 = calculateEMA(prices, 26);
+            
+            const macdLine = [];
+            for (let i = 0; i < ema12.length; i++) {
+                macdLine.push(BigMath.subtract(ema12[i], ema26[i]));
+            }
+            
+            const signalLine = calculateEMA(macdLine, 9);
+            
+            const histogram = [];
+            for (let i = 0; i < macdLine.length; i++) {
+                const signal = signalLine[i] || BigMath.create('0');
+                histogram.push(BigMath.subtract(macdLine[i], signal));
+            }
+            
+            return {
+                macd: macdLine,
+                signal: signalLine,
+                histogram: histogram
+            };
+        }
+
+        function calculateEMA(prices, period) {
+            const result = [];
+            const multiplier = BigMath.divide(
+                BigMath.create('2'),
+                BigMath.add(BigMath.create(period.toString()), BigMath.create('1'))
+            );
+            
+            let sum = BigMath.create('0');
+            for (let i = 0; i < Math.min(period, prices.length); i++) {
+                sum = BigMath.add(sum, prices[i]);
+            }
+            let ema = BigMath.divide(sum, BigMath.create(Math.min(period, prices.length).toString()));
+            result.push(ema);
+            
+            for (let i = period; i < prices.length; i++) {
+                const diff = BigMath.subtract(prices[i], ema);
+                ema = BigMath.add(BigMath.multiply(diff, multiplier), ema);
+                result.push(ema);
+            }
+            
+            return result;
+        }
+
         // ==================== 交易逻辑 ====================
         function calculateMarginRequired(commodity, quantity) {
             const price = gameState.marketData[commodity].currentPrice;
-            const contractValue = price * quantity * 100;
-            return contractValue * CONFIG.marginRatio;
+            const contractValue = BigMath.multiply(
+                BigMath.multiply(price, BigMath.create(quantity.toString())),
+                BigMath.create('100')
+            );
+            return BigMath.multiply(contractValue, CONFIG.marginRatio);
         }
 
         function calculateMarginRate() {
-            let usedMargin = 0;
+            let usedMargin = BigMath.create('0');
             gameState.positions.forEach(pos => {
-                usedMargin += calculateMarginRequired(pos.commodity, pos.quantity);
+                usedMargin = BigMath.add(usedMargin, calculateMarginRequired(pos.commodity, pos.quantity));
             });
 
             const availableBalance = gameState.balance;
-            if (usedMargin === 0) return Infinity;
-            return availableBalance / usedMargin;
+            if (BigMath.isEqualTo(usedMargin, BigMath.create('0'))) {
+                return BigMath.create('999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999');
+            }
+            return BigMath.divide(availableBalance, usedMargin);
         }
 
         function openPosition(type) {
@@ -777,14 +1210,19 @@
                 return;
             }
 
-            const marginRequired = calculateMarginRequired(commodity, quantity) / leverage;
+            const marginRequired = BigMath.divide(
+                calculateMarginRequired(commodity, quantity),
+                BigMath.create(leverage.toString())
+            );
 
-            if (marginRequired > gameState.balance) {
-                showModal('错误', `保证金不足。需要 ¥${marginRequired.toFixed(2)}，可用 ¥${gameState.balance.toFixed(2)}`);
+            if (BigMath.isGreaterThan(marginRequired, gameState.balance)) {
+                showModal('错误', 
+                    `保证金不足。\n需要: ¥${BigMath.toDisplay(marginRequired, 150)}\n可用: ¥${BigMath.toDisplay(gameState.balance, 150)}`
+                );
                 return;
             }
 
-            gameState.balance -= marginRequired;
+            gameState.balance = BigMath.subtract(gameState.balance, marginRequired);
 
             const position = {
                 id: Date.now(),
@@ -792,13 +1230,16 @@
                 type,
                 quantity,
                 leverage,
-                entryPrice: gameState.marketData[commodity].currentPrice,
+                entryPrice: BigMath.create(gameState.marketData[commodity].currentPrice),
                 margin: marginRequired,
                 openTime: new Date().toLocaleTimeString()
             };
 
             gameState.positions.push(position);
-            showModal('成功', `${type === 'long' ? '做多' : '做空'} ${quantity}手 ${CONFIG.commodities[commodity].name}`);
+            showModal('成功', 
+                `${type === 'long' ? '做多' : '做空'} ${quantity}手 ${CONFIG.commodities[commodity].name}\n` +
+                `入场价格: ¥${BigMath.toDisplay(position.entryPrice, 150)}`
+            );
             updateUI();
         }
 
@@ -810,37 +1251,62 @@
             const currentPrice = gameState.marketData[position.commodity].currentPrice;
             
             let profitLoss;
-            if (position.type === 'long') {
-                profitLoss = (currentPrice - position.entryPrice) * position.quantity * 100 * position.leverage;
-            } else {
-                profitLoss = (position.entryPrice - currentPrice) * position.quantity * 100 * position.leverage;
-            }
+            const priceDiff = position.type === 'long' 
+                ? BigMath.subtract(currentPrice, position.entryPrice)
+                : BigMath.subtract(position.entryPrice, currentPrice);
+            
+            profitLoss = BigMath.multiply(
+                BigMath.multiply(
+                    BigMath.multiply(priceDiff, BigMath.create(position.quantity.toString())),
+                    BigMath.create('100')
+                ),
+                BigMath.create(position.leverage.toString())
+            );
 
-            gameState.balance += position.margin + profitLoss;
+            gameState.balance = BigMath.add(
+                BigMath.add(gameState.balance, position.margin),
+                profitLoss
+            );
+
             gameState.positions.splice(positionIndex, 1);
-            showModal('平仓', `盈亏：¥${profitLoss.toFixed(2)}`);
+            showModal('平仓', 
+                `盈亏: ¥${BigMath.toDisplay(profitLoss, 150)}\n` +
+                `入场价: ¥${BigMath.toDisplay(position.entryPrice, 150)}\n` +
+                `平仓价: ¥${BigMath.toDisplay(currentPrice, 150)}`
+            );
             updateUI();
         }
 
         function checkLiquidation() {
             const marginRate = calculateMarginRate();
             
-            if (marginRate < CONFIG.liquidationThreshold) {
-                let totalLoss = 0;
+            if (BigMath.isLessThan(marginRate, CONFIG.liquidationThreshold)) {
+                let totalLoss = BigMath.create('0');
                 gameState.positions.forEach(position => {
                     const currentPrice = gameState.marketData[position.commodity].currentPrice;
-                    let profitLoss;
-                    if (position.type === 'long') {
-                        profitLoss = (currentPrice - position.entryPrice) * position.quantity * 100 * position.leverage;
-                    } else {
-                        profitLoss = (position.entryPrice - currentPrice) * position.quantity * 100 * position.leverage;
-                    }
-                    totalLoss += profitLoss;
-                    gameState.balance += position.margin;
+                    
+                    const priceDiff = position.type === 'long' 
+                        ? BigMath.subtract(currentPrice, position.entryPrice)
+                        : BigMath.subtract(position.entryPrice, currentPrice);
+                    
+                    const profitLoss = BigMath.multiply(
+                        BigMath.multiply(
+                            BigMath.multiply(priceDiff, BigMath.create(position.quantity.toString())),
+                            BigMath.create('100')
+                        ),
+                        BigMath.create(position.leverage.toString())
+                    );
+                    
+                    totalLoss = BigMath.add(totalLoss, profitLoss);
+                    gameState.balance = BigMath.add(gameState.balance, position.margin);
                 });
 
                 gameState.positions = [];
-                showModal('爆仓', `保证金不足，已强制平仓！\n总损失：¥${totalLoss.toFixed(2)}\n剩余资金：¥${gameState.balance.toFixed(2)}`);
+                showModal('爆仓', 
+                    `保证金不足，已强制平仓！\n` +
+                    `总损失: ¥${BigMath.toDisplay(totalLoss, 150)}\n` +
+                    `剩余资金: ¥${BigMath.toDisplay(gameState.balance, 150)}`
+                );
                 updateUI();
             }
         }
@@ -848,21 +1314,21 @@
         // ==================== UI 更新 ====================
         function updateUI() {
             const floatingPL = calculateFloatingPL();
-            const equity = gameState.balance + floatingPL;
-            let usedMargin = 0;
+            const equity = BigMath.add(gameState.balance, floatingPL);
+            let usedMargin = BigMath.create('0');
 
             gameState.positions.forEach(pos => {
-                usedMargin += calculateMarginRequired(pos.commodity, pos.quantity);
+                usedMargin = BigMath.add(usedMargin, calculateMarginRequired(pos.commodity, pos.quantity));
             });
 
-            document.getElementById('balance').textContent = `¥${gameState.balance.toFixed(2)}`;
-            document.getElementById('equity').textContent = `¥${equity.toFixed(2)}`;
+            document.getElementById('balance').textContent = `¥${BigMath.toDisplay(gameState.balance, 2)}`;
+            document.getElementById('equity').textContent = `¥${BigMath.toDisplay(equity, 2)}`;
             
             const floatingPLDisplay = document.getElementById('floatingPLDisplay');
             const floatingPLElement = document.getElementById('floatingPL');
-            floatingPLElement.textContent = `¥${floatingPL.toFixed(2)}`;
+            floatingPLElement.textContent = `¥${BigMath.toDisplay(floatingPL, 2)}`;
             
-            if (floatingPL >= 0) {
+            if (BigMath.isGreaterThan(floatingPL, BigMath.create('0')) || BigMath.isEqualTo(floatingPL, BigMath.create('0'))) {
                 floatingPLDisplay.classList.add('profit');
                 floatingPLDisplay.classList.remove('loss');
             } else {
@@ -871,26 +1337,33 @@
             }
 
             document.getElementById('margin').textContent = 
-                `¥${usedMargin.toFixed(0)} / ¥${gameState.balance.toFixed(0)}`;
+                `¥${BigMath.toDisplay(usedMargin, 0)} / ¥${BigMath.toDisplay(gameState.balance, 0)}`;
 
             const price = gameState.marketData[gameState.currentCommodity].currentPrice;
-            document.getElementById('currentPrice').textContent = price.toFixed(2);
+            document.getElementById('currentPrice').textContent = BigMath.toDisplay(price, 2);
 
             updatePositionList();
-            drawKlineChart();
+            drawCharts();
         }
 
         function calculateFloatingPL() {
-            let totalPL = 0;
+            let totalPL = BigMath.create('0');
             gameState.positions.forEach(position => {
                 const currentPrice = gameState.marketData[position.commodity].currentPrice;
-                let pl;
-                if (position.type === 'long') {
-                    pl = (currentPrice - position.entryPrice) * position.quantity * 100 * position.leverage;
-                } else {
-                    pl = (position.entryPrice - currentPrice) * position.quantity * 100 * position.leverage;
-                }
-                totalPL += pl;
+                
+                const priceDiff = position.type === 'long' 
+                    ? BigMath.subtract(currentPrice, position.entryPrice)
+                    : BigMath.subtract(position.entryPrice, currentPrice);
+                
+                const pl = BigMath.multiply(
+                    BigMath.multiply(
+                        BigMath.multiply(priceDiff, BigMath.create(position.quantity.toString())),
+                        BigMath.create('100')
+                    ),
+                    BigMath.create(position.leverage.toString())
+                );
+                
+                totalPL = BigMath.add(totalPL, pl);
             });
             return totalPL;
         }
@@ -906,26 +1379,32 @@
             let html = '';
             gameState.positions.forEach(pos => {
                 const currentPrice = gameState.marketData[pos.commodity].currentPrice;
-                let profitLoss;
-                if (pos.type === 'long') {
-                    profitLoss = (currentPrice - pos.entryPrice) * pos.quantity * 100 * pos.leverage;
-                } else {
-                    profitLoss = (pos.entryPrice - currentPrice) * pos.quantity * 100 * pos.leverage;
-                }
+                
+                const priceDiff = pos.type === 'long' 
+                    ? BigMath.subtract(currentPrice, pos.entryPrice)
+                    : BigMath.subtract(pos.entryPrice, currentPrice);
+                
+                const profitLoss = BigMath.multiply(
+                    BigMath.multiply(
+                        BigMath.multiply(priceDiff, BigMath.create(pos.quantity.toString())),
+                        BigMath.create('100')
+                    ),
+                    BigMath.create(pos.leverage.toString())
+                );
 
                 const typeName = pos.type === 'long' ? '多头' : '空头';
                 const typeClass = pos.type === 'long' ? 'long' : 'short';
-                const plClass = profitLoss >= 0 ? 'profit' : 'loss';
-                const plSymbol = profitLoss >= 0 ? '+' : '';
+                const plClass = BigMath.isGreaterThan(profitLoss, BigMath.create('0')) || BigMath.isEqualTo(profitLoss, BigMath.create('0')) ? 'profit' : 'loss';
+                const plSymbol = BigMath.isGreaterThan(profitLoss, BigMath.create('0')) || BigMath.isEqualTo(profitLoss, BigMath.create('0')) ? '+' : '';
 
                 html += `
                     <div class="position-item ${typeClass}">
                         <div class="position-header">
                             <span class="position-type">${typeName} ${pos.quantity}手</span>
-                            <span class="position-pl ${plClass}">${plSymbol}¥${profitLoss.toFixed(2)}</span>
+                            <span class="position-pl ${plClass}">${plSymbol}¥${BigMath.toDisplay(profitLoss, 2)}</span>
                         </div>
                         <div class="position-detail">品种: ${CONFIG.commodities[pos.commodity].name}</div>
-                        <div class="position-detail">入场: ¥${pos.entryPrice.toFixed(2)} | 杠杆: ${pos.leverage}x</div>
+                        <div class="position-detail">入场: ¥${BigMath.toDisplay(pos.entryPrice, 2)} | 杠杆: ${pos.leverage}x</div>
                         <div class="position-detail">时间: ${pos.openTime}</div>
                         <button class="close-btn" onclick="game.closePosition(${pos.id})">平仓</button>
                     </div>
@@ -936,6 +1415,16 @@
         }
 
         let currentKlinePeriod = '1s';
+
+        function drawCharts() {
+            drawKlineChart();
+            if (gameState.chartSettings.showVolume) {
+                drawVolumeChart();
+            }
+            if (gameState.chartSettings.showMACD) {
+                drawMACDChart();
+            }
+        }
 
         function drawKlineChart() {
             const canvas = document.getElementById('klineChart');
@@ -962,17 +1451,25 @@
             let maxPrice = displayKlines[0].high;
             let minPrice = displayKlines[0].low;
             displayKlines.forEach(k => {
-                maxPrice = Math.max(maxPrice, k.high);
-                minPrice = Math.min(minPrice, k.low);
+                maxPrice = BigMath.max(maxPrice, k.high);
+                minPrice = BigMath.min(minPrice, k.low);
             });
 
             const padding = 50;
             const chartWidth = canvas.width - padding * 2;
             const chartHeight = canvas.height - padding * 2;
-            const priceRange = maxPrice - minPrice || 1;
+            const priceRange = BigMath.subtract(maxPrice, minPrice);
+            const priceRangeNum = BigMath.isEqualTo(priceRange, BigMath.create('0')) 
+                ? 1 
+                : BigMath.toNumber(priceRange);
 
             function priceToY(price) {
-                return canvas.height - padding - ((price - minPrice) / priceRange) * chartHeight;
+                const priceBig = BigMath.create(price);
+                const normalized = BigMath.divide(
+                    BigMath.subtract(priceBig, minPrice),
+                    BigMath.create(priceRangeNum.toString())
+                );
+                return canvas.height - padding - (BigMath.toNumber(normalized) * chartHeight);
             }
 
             function indexToX(index) {
@@ -992,43 +1489,101 @@
                 ctx.lineTo(canvas.width - padding, y);
                 ctx.stroke();
 
-                const price = minPrice + ((4 - i) / 4) * priceRange;
+                const priceAtY = BigMath.add(
+                    minPrice,
+                    BigMath.multiply(
+                        BigMath.create(priceRangeNum.toString()),
+                        BigMath.create(((4 - i) / 4).toString())
+                    )
+                );
                 ctx.fillStyle = '#666';
                 ctx.font = '11px Arial';
                 ctx.textAlign = 'right';
-                ctx.fillText(price.toFixed(2), padding - 10, y + 4);
+                ctx.fillText(BigMath.toDisplay(priceAtY, 2), padding - 10, y + 4);
             }
 
-            const ma5 = calculateMA(displayKlines, 5);
-            const ma10 = calculateMA(displayKlines, 10);
-
-            ctx.strokeStyle = '#ff9800';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            for (let i = 0; i < ma5.length; i++) {
-                const x = indexToX(i);
-                const y = priceToY(ma5[i]);
-                if (i === 0) {
-                    ctx.moveTo(x, y);
-                } else {
+            if (gameState.chartSettings.showBoll) {
+                const boll = calculateBollinger(displayKlines, 20, 2);
+                
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+                ctx.beginPath();
+                for (let i = 0; i < boll.upper.length; i++) {
+                    const x = indexToX(i);
+                    const y = priceToY(boll.upper[i]);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                for (let i = boll.lower.length - 1; i >= 0; i--) {
+                    const x = indexToX(i);
+                    const y = priceToY(boll.lower[i]);
                     ctx.lineTo(x, y);
                 }
-            }
-            ctx.stroke();
+                ctx.closePath();
+                ctx.fill();
 
-            ctx.strokeStyle = '#2196f3';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            for (let i = 0; i < ma10.length; i++) {
-                const x = indexToX(i);
-                const y = priceToY(ma10[i]);
-                if (i === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+                
+                ctx.beginPath();
+                for (let i = 0; i < boll.upper.length; i++) {
+                    const x = indexToX(i);
+                    const y = priceToY(boll.upper[i]);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
                 }
+                ctx.stroke();
+
+                ctx.beginPath();
+                for (let i = 0; i < boll.lower.length; i++) {
+                    const x = indexToX(i);
+                    const y = priceToY(boll.lower[i]);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                ctx.setLineDash([]);
             }
-            ctx.stroke();
+
+            if (gameState.chartSettings.showMA) {
+                const ma5 = calculateMA(displayKlines, 5);
+                const ma10 = calculateMA(displayKlines, 10);
+                const ma20 = calculateMA(displayKlines, 20);
+
+                ctx.strokeStyle = '#ff9800';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i < ma5.length; i++) {
+                    const x = indexToX(i);
+                    const y = priceToY(ma5[i]);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                ctx.strokeStyle = '#2196f3';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i < ma10.length; i++) {
+                    const x = indexToX(i);
+                    const y = priceToY(ma10[i]);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                ctx.strokeStyle = '#4caf50';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i < ma20.length; i++) {
+                    const x = indexToX(i);
+                    const y = priceToY(ma20[i]);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
 
             const klineWidth = chartWidth / displayCount * 0.8;
             displayKlines.forEach((k, i) => {
@@ -1038,7 +1593,7 @@
                 const highY = priceToY(k.high);
                 const lowY = priceToY(k.low);
 
-                const isUp = k.close >= k.open;
+                const isUp = BigMath.isGreaterThan(k.close, k.open) || BigMath.isEqualTo(k.close, k.open);
                 ctx.fillStyle = isUp ? '#00ff41' : '#ff3333';
                 ctx.strokeStyle = isUp ? '#00ff41' : '#ff3333';
 
@@ -1061,24 +1616,170 @@
                 const time = new Date(displayKlines[i].time);
                 ctx.fillText(time.getHours() + ':' + String(time.getMinutes()).padStart(2, '0'), x, canvas.height - 15);
             }
-
-            ctx.font = '12px Arial';
-            ctx.textAlign = 'left';
-            ctx.fillStyle = '#ff9800';
-            ctx.fillText('MA5', padding, 20);
-            ctx.fillStyle = '#2196f3';
-            ctx.fillText('MA10', padding + 60, 20);
         }
 
-        function calculateMA(klines, period) {
-            const result = [];
-            for (let i = 0; i < klines.length; i++) {
-                const start = Math.max(0, i - period + 1);
-                const values = klines.slice(start, i + 1).map(k => (k.open + k.close + k.high + k.low) / 4);
-                const avg = values.reduce((a, b) => a + b) / values.length;
-                result.push(avg);
+        function drawVolumeChart() {
+            const canvas = document.getElementById('volumeChart');
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+
+            const commodity = gameState.currentCommodity;
+            const klines = gameState.klineData[commodity][currentKlinePeriod];
+
+            if (klines.length === 0) return;
+
+            const displayCount = Math.min(50, klines.length);
+            const startIndex = Math.max(0, klines.length - displayCount);
+            const displayKlines = klines.slice(startIndex);
+
+            let maxVolume = Math.max(...displayKlines.map(k => k.volume));
+            if (maxVolume === 0) maxVolume = 1;
+
+            const padding = 50;
+            const chartWidth = canvas.width - padding * 2;
+            const chartHeight = canvas.height - 30;
+
+            function volumeToY(volume) {
+                return canvas.height - 30 - (volume / maxVolume) * chartHeight;
             }
-            return result;
+
+            function indexToX(index) {
+                const barWidth = chartWidth / displayCount;
+                return padding + (index + 0.5) * barWidth;
+            }
+
+            ctx.fillStyle = '#0a0e27';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 2; i++) {
+                const y = 10 + (i / 2) * chartHeight;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(canvas.width - padding, y);
+                ctx.stroke();
+            }
+
+            const barWidth = chartWidth / displayCount * 0.8;
+            displayKlines.forEach((k, i) => {
+                const x = indexToX(i);
+                const y = volumeToY(k.volume);
+                const height = canvas.height - 30 - y;
+
+                const isUp = BigMath.isGreaterThan(k.close, k.open) || BigMath.isEqualTo(k.close, k.open);
+                ctx.fillStyle = isUp ? 'rgba(0, 255, 65, 0.6)' : 'rgba(255, 51, 51, 0.6)';
+                ctx.fillRect(x - barWidth / 2, y, barWidth, height);
+            });
+
+            ctx.fillStyle = '#666';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText('成交量', canvas.width - 10, 15);
+        }
+
+        function drawMACDChart() {
+            const canvas = document.getElementById('macdChart');
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+
+            const commodity = gameState.currentCommodity;
+            const klines = gameState.klineData[commodity][currentKlinePeriod];
+
+            if (klines.length < 26) {
+                ctx.fillStyle = '#555';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('数据不足', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            const displayCount = Math.min(50, klines.length);
+            const startIndex = Math.max(0, klines.length - displayCount);
+            const displayKlines = klines.slice(startIndex);
+
+            const macd = calculateMACD(displayKlines);
+
+            let maxVal = BigMath.max(...macd.macd, ...macd.signal);
+            let minVal = BigMath.min(...macd.macd, ...macd.signal);
+            const range = BigMath.abs(BigMath.subtract(maxVal, minVal));
+            const rangeNum = BigMath.isEqualTo(range, BigMath.create('0')) ? 1 : BigMath.toNumber(range);
+            const midVal = BigMath.divide(BigMath.add(maxVal, minVal), BigMath.create('2'));
+
+            const padding = 50;
+            const chartWidth = canvas.width - padding * 2;
+            const chartHeight = canvas.height - 30;
+
+            function valueToY(value) {
+                const valueBig = BigMath.create(value);
+                const normalized = BigMath.divide(
+                    BigMath.subtract(valueBig, minVal),
+                    BigMath.create(rangeNum.toString())
+                );
+                return canvas.height - 30 - (BigMath.toNumber(normalized) * chartHeight);
+            }
+
+            function indexToX(index) {
+                const barWidth = chartWidth / displayCount;
+                return padding + (index + 0.5) * barWidth;
+            }
+
+            ctx.fillStyle = '#0a0e27';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const midY = valueToY(midVal);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(padding, midY);
+            ctx.lineTo(canvas.width - padding, midY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const barWidth = chartWidth / displayCount * 0.6;
+            macd.histogram.forEach((h, i) => {
+                if (h !== undefined) {
+                    const x = indexToX(i);
+                    const y = valueToY(h);
+                    const height = midY - y;
+
+                    const isPositive = BigMath.isGreaterThan(h, BigMath.create('0')) || BigMath.isEqualTo(h, BigMath.create('0'));
+                    ctx.fillStyle = isPositive ? 'rgba(0, 255, 65, 0.4)' : 'rgba(255, 51, 51, 0.4)';
+                    ctx.fillRect(x - barWidth / 2, Math.min(y, midY), barWidth, Math.abs(height));
+                }
+            });
+
+            ctx.strokeStyle = '#00ff41';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < macd.macd.length; i++) {
+                const x = indexToX(i);
+                const y = valueToY(macd.macd[i]);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            ctx.strokeStyle = '#ff3333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < macd.signal.length; i++) {
+                const x = indexToX(i);
+                const y = valueToY(macd.signal[i]);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            ctx.fillStyle = '#666';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText('MACD', canvas.width - 10, 15);
         }
 
         // ==================== 事件处理 ====================
@@ -1112,19 +1813,48 @@
                 });
             });
 
+            document.getElementById('showMA').addEventListener('change', function() {
+                gameState.chartSettings.showMA = this.checked;
+                updateUI();
+            });
+
+            document.getElementById('showBoll').addEventListener('change', function() {
+                gameState.chartSettings.showBoll = this.checked;
+                updateUI();
+            });
+
+            document.getElementById('showVolume').addEventListener('change', function() {
+                gameState.chartSettings.showVolume = this.checked;
+                updateUI();
+            });
+
+            document.getElementById('showMACD').addEventListener('change', function() {
+                gameState.chartSettings.showMACD = this.checked;
+                updateUI();
+            });
+
             document.getElementById('fullBtn').addEventListener('click', () => {
                 const commodity = gameState.currentCommodity;
-                const marginPerUnit = calculateMarginRequired(commodity, 1) / gameState.currentLeverage;
-                const maxQuantity = Math.floor(gameState.balance / marginPerUnit);
-                gameState.currentQuantity = Math.max(1, maxQuantity);
+                const marginPerUnit = BigMath.divide(
+                    calculateMarginRequired(commodity, 1),
+                    BigMath.create(gameState.currentLeverage.toString())
+                );
+                const maxQuantity = BigMath.toNumber(BigMath.divide(gameState.balance, marginPerUnit));
+                gameState.currentQuantity = Math.max(1, Math.floor(maxQuantity));
                 document.getElementById('quantityInput').value = gameState.currentQuantity;
             });
 
             document.getElementById('halfBtn').addEventListener('click', () => {
                 const commodity = gameState.currentCommodity;
-                const marginPerUnit = calculateMarginRequired(commodity, 1) / gameState.currentLeverage;
-                const maxQuantity = Math.floor(gameState.balance / marginPerUnit / 2);
-                gameState.currentQuantity = Math.max(1, maxQuantity);
+                const marginPerUnit = BigMath.divide(
+                    calculateMarginRequired(commodity, 1),
+                    BigMath.create(gameState.currentLeverage.toString())
+                );
+                const maxQuantity = BigMath.toNumber(BigMath.divide(
+                    BigMath.divide(gameState.balance, marginPerUnit),
+                    BigMath.create('2')
+                ));
+                gameState.currentQuantity = Math.max(1, Math.floor(maxQuantity));
                 document.getElementById('quantityInput').value = gameState.currentQuantity;
             });
 
@@ -1167,14 +1897,14 @@
             setInterval(() => {
                 updatePrices();
                 checkLiquidation();
-            }, CONFIG.tickSize * 1000);
+            }, BigMath.toNumber(BigMath.multiply(CONFIG.tickSize, BigMath.create('1000'))));
 
             setInterval(checkLiquidation, 1000);
 
-            console.log('游戏已初始化');
-            console.log('初始资金:', CONFIG.initialBalance);
-            console.log('保证金比例:', CONFIG.marginRatio * 100 + '%');
-            console.log('爆仓阈值:', CONFIG.liquidationThreshold * 100 + '%');
+            console.log('游戏已初始化 - 高精度模式（150位小数）');
+            console.log('初始资金:', BigMath.toString(CONFIG.initialBalance));
+            console.log('保证金比例:', BigMath.toString(BigMath.multiply(CONFIG.marginRatio, BigMath.create('100'))) + '%');
+            console.log('爆仓阈值:', BigMath.toString(BigMath.multiply(CONFIG.liquidationThreshold, BigMath.create('100'))) + '%');
         }
 
         window.addEventListener('load', init);
